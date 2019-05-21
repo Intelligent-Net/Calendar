@@ -2,9 +2,9 @@ package space.asgardia.calendar
 
 case class Date(y: Int, doy: Int, cal: Calendar = EarthCalendar.cal) {
   def this(dt: String, c: Calendar) =
-    this(dt.substring(0, 4).toInt, dt.substring(5).toInt, c)
+    this(dt.substring(0, dt.indexOf('+')).toInt, dt.substring(dt.indexOf('+')+1).toInt, c)
   def this(dt: String) =
-    this(dt.substring(0, 4).toInt, dt.substring(5).toInt, EarthCalendar.cal)
+    this(dt.substring(0, dt.indexOf('+')).toInt, dt.substring(dt.indexOf('+')+1).toInt, EarthCalendar.cal)
   def this(y:Int, m: Int, d: Int, c: Calendar) =
     this(y, m * c.daysInMonth + d, c)
   def this(y:Int, m: Int, d: Int) =
@@ -12,7 +12,7 @@ case class Date(y: Int, doy: Int, cal: Calendar = EarthCalendar.cal) {
   def this(c: Calendar) =
     this(c.now().toString, c)
   def this() =
-    this(EarthCalendar.cal.now().toString)
+    this(EarthCalendar.cal.now().toString, EarthCalendar.cal)
 
   override def toString(): String = 
     if (y < 0)
@@ -21,7 +21,51 @@ case class Date(y: Int, doy: Int, cal: Calendar = EarthCalendar.cal) {
       f"$y%04d+$doy%03d"
 
   def toLongString(): String = {
-    f"$y%04d-${if (doy < cal.grDaysInYear.toInt - 1) doy / cal.daysInMonth else cal.monthsInYear - 1}%02d-${if (doy / cal.daysInMonth < cal.monthsInYear.toInt) doy % cal.daysInMonth else cal.daysInMonth + doy % cal.daysInMonth}%02d"
+    val yy = y
+    val mm = if (doy < cal.grDaysInYear.toInt - 1) doy / cal.daysInMonth else cal.monthsInYear - 1
+    val dd = if (doy / cal.daysInMonth < cal.monthsInYear.toInt) doy % cal.daysInMonth else cal.daysInMonth + doy % cal.daysInMonth
+
+    if (yy < 0)
+      f"$yy%05d-$mm%02d-$dd%02d"
+    else
+      f"$yy%04d-$mm%02d-$dd%02d"
+  }
+
+  private def toLong1BaseInternal(off: Int): String = {
+    val yy = if (y > 0 || (off == 1 && y == 0)) y + off else y
+    val mm = (if (doy < cal.grDaysInYear.toInt - 1) doy / cal.daysInMonth else cal.monthsInYear - 1) + off
+    val dd = (if (doy / cal.daysInMonth < cal.monthsInYear.toInt) doy % cal.daysInMonth else cal.daysInMonth + doy % cal.daysInMonth) + off
+
+    if (yy < 0)
+      f"$yy%05d-$mm%02d-$dd%02d"
+    else
+      f"$yy%04d-$mm%02d-$dd%02d"
+  }
+
+  def toLong1Based(): String = {
+    toLong1BaseInternal(1)
+  }
+
+  def fromLong1Based(): String = {
+    toLong1BaseInternal(-1)
+  }
+
+  private def to1BasedInternal(off: Int): String = {
+    val yy = if (y > 0 || (off == 1 && y == 0)) y + off else y
+    val doy1 = doy + off
+
+    if (y < 0)
+      f"$yy%05d+$doy1%03d"
+    else
+      f"$yy%04d+$doy1%03d"
+  }
+
+  def to1Based(): String = {
+    to1BasedInternal(1)
+  }
+
+  def from1Based(): String = {
+    to1BasedInternal(-1)
   }
 
   def locale(): String = 
@@ -49,18 +93,52 @@ case class Date(y: Int, doy: Int, cal: Calendar = EarthCalendar.cal) {
   def toEra(): Double = {
     val days = ((y * cal.grDaysInYear + doy) * cal.grHoursInDay) / EarthCalendar.cal.grHoursInDay + cal.grDayOffset
 
-    cal.grStartOfEra * EarthCalendar.cal.grDaysInYear + days
+    days
   }
 
   def fromEra(e: Double): Date = {
-    val eoff = e - cal.grStartOfEra * EarthCalendar.cal.grDaysInYear
-    val days = ((eoff - cal.grDayOffset) * EarthCalendar.cal.grHoursInDay) / cal.grHoursInDay
-
-    val yr = (days / cal.grDaysInYear).round.toInt
-    val doy = (days % cal.grDaysInYear).round.toInt
-
-    Date(yr,doy,cal)
+    cal.fromEra(e)
   }
+
+  def decDays(i: Int): Date = {
+    if (doy >= i) {
+      Date(y, doy - i, cal)
+    }
+    else {
+      val diy = if (cal.isLeap(y - 1)) cal.grDaysInYear.ceil.toInt else cal.grDaysInYear.toInt
+
+      Date(y - 1, doy, cal).decDays(i - diy)
+    }
+  }
+
+  def incDays(i: Int): Date = {
+    val diy = if (cal.isLeap(y)) cal.grDaysInYear.ceil.toInt else cal.grDaysInYear.toInt
+
+    if (doy + i < diy) {
+      Date(y, doy + i, cal)
+    }
+    else {
+      Date(y + 1, doy, cal).incDays(i - diy)
+    }
+  }
+
+  def decYears(i: Int): Date = {
+    var yy = y - i
+    val diy = if (cal.isLeap(y)) cal.grDaysInYear.ceil.toInt else cal.grDaysInYear.toInt
+    var d = if (doy > diy - 1) doy else doy - 1
+
+    Date(yy, d, cal)
+  }
+
+  def incYears(i: Int): Date = {
+    decYears(-i)
+  }
+
+  def asgardianToGregorian(): String = 
+    cal.asgardianToGregorian(this)
+
+  def gregorianToAsgardian(dt: String): Date =
+    cal.gregorianToAsgardian(dt)
 }
 
 object Date {
