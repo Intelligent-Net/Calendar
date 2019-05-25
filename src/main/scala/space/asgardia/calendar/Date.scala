@@ -1,52 +1,41 @@
 package space.asgardia.calendar
 
 case class Date(era: Double, cal: Calendar = EarthCalendar.cal) {
-  //val yr : Int
-  //val yrDay : Int
-  def this(eEra: Double, c: Calendar, ge: Boolean) =
+  def this(eEra: Double, c: Calendar, ge: Boolean) = {
     this(if (ge) ((eEra - c.grDayOffset) * EarthCalendar.cal.grHoursInDay) / c.grHoursInDay else eEra, c)
-  def this(y: Double, doy: Double, c: Calendar) =
+  }
+  def this(y: Double, doy: Double, c: Calendar) = {
     this(y * c.grDaysInYear + doy, c)
+  }
   def this(y: Double, doy: Double) =
-    this(y * EarthCalendar.cal.grDaysInYear + doy, EarthCalendar.cal)
-  def this(dt: String, c: Calendar) =
+    this(y, doy, EarthCalendar.cal)
+  def this(dt: String, c: Calendar) = {
     this(dt.substring(0, dt.indexOf('+')).toInt * c.grDaysInYear + dt.substring(dt.indexOf('+')+1).toInt, c)
+  }
   def this(dt: String) =
-    this(dt.substring(0, dt.indexOf('+')).toInt * EarthCalendar.cal.grDaysInYear + dt.substring(dt.indexOf('+')+1).toInt, EarthCalendar.cal)
+    this(dt, EarthCalendar.cal)
   def this(y:Int, m: Int, d: Int, c: Calendar) =
     this(y * c.grDaysInYear + m * c.daysInMonth + d, c)
   def this(y:Int, m: Int, d: Int) =
-    this(y * EarthCalendar.cal.grDaysInYear +  m * EarthCalendar.cal.daysInMonth + d, EarthCalendar.cal)
+    this(y, m, d, EarthCalendar.cal)
   def this(c: Calendar) =
     this(c.now().era, c)
   def this() =
     this(EarthCalendar.cal.now().era, EarthCalendar.cal)
 
-  private def yDoy(): (Double, Double) =
-    (era / cal.grDaysInYear, era % cal.grDaysInYear)
+  def yDoy(): (Double, Double) = {
+    cal.yDoy(era)
+  }
 
   override def toString(): String = {
     val (y,doy) = yDoy
+    //println(yDoy + " : " + era)
 
     if (y < 0)
-      f"${y.toInt}%05d+${(doy + 0.0000001).toInt}%03d"
+      f"${y.toInt}%05d+${doy.round.toInt}%03d"
     else
-      f"${y.toInt}%04d+${(doy + 0.0000001).toInt}%03d"
+      f"${y.toInt}%04d+${doy.round.toInt}%03d"
   }
-
-  /*
-  override def toString(): String = {
-    val y = (era / cal.grDaysInYear + 0.00000001).toInt 
-    val yLen = if (cal.gregorianIsLeap(y)) cal.grDaysInYear.ceil.toInt else cal.grDaysInYear.toInt
-    val doy = era % yLen
-println(y + "++" + doy + " : " + era)
-
-    if (y < 0)
-      f"${y.toInt}%05d+${doy.toInt}%03d"
-    else
-      f"${y.toInt}%04d+${doy.toInt}%03d"
-  }
-  */
 
   def toLongString(): String = {
     val (yy,doy) = yDoy
