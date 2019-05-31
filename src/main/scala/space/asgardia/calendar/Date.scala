@@ -24,6 +24,7 @@ case class Date(y: Int, doy: Double, cal: Calendar = EarthCalendar.cal) {
       f"$y%05d+${doy.toInt}%03d"
     else
       f"$y%04d+${doy.toInt}%03d"
+      //f"$y%05d+${doy}%03.4f"
 
   def toLongString(): String = {
     f"$y%04.0f-${if (doy < cal.daysInYear.toInt - 1) doy / cal.daysInMonth else cal.monthsInYear - 1}%02.0f-${if (doy / cal.daysInMonth < cal.monthsInYear.toInt) doy % cal.daysInMonth else cal.daysInMonth + doy % cal.daysInMonth}%02.0f"
@@ -60,7 +61,11 @@ case class Date(y: Int, doy: Double, cal: Calendar = EarthCalendar.cal) {
   }
 
   def fromEra(e: Double): Date = {
-    cal.fromEra(e.toInt)
+    cal.fromEra(e)
+  }
+
+  def convert(dt: Date) = {
+    cal.convert(dt)
   }
 }
 

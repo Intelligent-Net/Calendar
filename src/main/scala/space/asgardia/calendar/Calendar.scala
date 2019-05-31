@@ -24,8 +24,9 @@ case class Calendar(locale: String = "Earth",
   private val cumMonthLens = baseCumMonthLens.map(m => if (m == baseCumMonthLens.max) daysInYear.floor.toInt else m).filter(m => m < daysInYear.ceil.toInt)
   private val cumLeapMonthLens = gCumMonthLens.map(m => if (m == gCumMonthLens.max) daysInYear.ceil.toInt else m)
 
-  def yearFromEra(e: Double) =
+  def yearFromEra(e: Double) = {
     ((e / daysInYear.ceil).toInt to (e / daysInYear.floor).toInt).filter(m => cumYearLens(m) <= e).max
+  }
 
   def doyFromEra(e: Double, y: Int = -2000000000) = {
     val yr = if (y == -2000000000) yearFromEra(e) else y
@@ -34,6 +35,14 @@ case class Calendar(locale: String = "Earth",
   }
 
   private val tz = java.util.TimeZone.getTimeZone("GMT")
+  private val libEpoch = {
+    val cal = java.util.Calendar.getInstance(tz)
+
+    cal.set(startOfEra, 11, 31)
+
+    cal.getTime().getTime() / 1000 / 60 / 60 / 24
+  }
+
 
   def toEra(dt: Date) = {
     cumYearLens(dt.y) + dt.doy
@@ -46,29 +55,29 @@ case class Calendar(locale: String = "Earth",
   def fromEra(era: Double): Date = {
     val yr = yearFromEra(era)
     val dy = doyFromEra(era, yr)
-//println("### " + era + " === " + dy)
 
     Date(yr, dy, this)
   }
 
+  def convert(dt: Date) = {
+    fromEra((dt.cal.epoch(dt) + dayOffset) * earthHoursInDay / hoursInDay)
+  }
+
   def epoch(dt: Date): Double = {
-//val ee = (cumYearLens(dt.y) + dt.doy) / earthHoursInDay * hoursInDay - dayOffset
-//println("### " + ee + " === " + dt.doy)
     (cumYearLens(dt.y) + dt.doy) * hoursInDay / earthHoursInDay - dayOffset
+  }
+
+  def fromEpoch(epoch: Double) = {
+    val era = ((epoch - libEpoch) + dayOffset) * earthHoursInDay / hoursInDay
+
+    fromEra(era)
   }
 
   def now(): Date = {
     val cal = java.util.Calendar.getInstance(tz)
     val epoch = cal.getTime().getTime() / 1000 / 60 / 60 / 24
 
-    cal.set(startOfEra, 11, 31)
-
-    val e = cal.getTime().getTime() / 1000 / 60 / 60 / 24
-    val era = ((epoch - e) + dayOffset) * earthHoursInDay / hoursInDay
-//val ee = era / earthHoursInDay * hoursInDay - dayOffset
-//println("e = " + e + ", era = " + era + ", ee = " + ee)
-
-    fromEra(era)
+    fromEpoch(epoch)
   }
 
   def gregorianIsLeap(y: Int): Boolean =
@@ -375,7 +384,8 @@ object TestCalendar {
     var mars = marsNow
 
     println("Earth: " + earth.epoch + " / " + earth.toEra + " - " + earth.fromEra(earth.toEra).epoch + ", Mars: " + mars.epoch + " / " + mars.toEra + " - " + mars.fromEra(mars.toEra).epoch) 
-    println(earth + " == " + mars)
+    println(earth + " ## " + mars + " | " + earth.convert(mars) + " ## " + mars.convert(earth))
     println(mars.toEra + " # " + mars.fromEra(mars.toEra) + " : " + mars.fromEra(mars.toEra).epoch)
+    //println(mars.fromEra(earth.toEra) + " <==> " + earth.fromEra(mars.toEra).epoch)
   }
 }
