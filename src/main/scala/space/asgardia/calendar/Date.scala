@@ -92,34 +92,3 @@ object Date {
     c.now()
 }
 
-object TestDate {
-  def main(args: Array[String]): Unit = {
-    val dt = Date(2, 100)
-    val dt2 = Date(6, 100)
-    val dt3 = Date(2, 100, MarsCalendar.cal)
-    val dt4 = dt.fromEra(dt3.toEra)
-    val dt5 = dt3.fromEra(dt4.toEra)
-
-    println(dt + " -> " + dt2)
-    println(dt3)
-
-    println(dt.diff(dt2))
-    println(dt.diff(dt))
-    println(new Date)
-    println(Date.now)
-    //println(dt.toLocal(dt2))
-    //println(dt.toLocal(dt3))
-    //println(dt3.toLocal(Date(4,55)))
-    println(dt.toEra + " : " + dt.fromEra(dt.toEra))
-    println(dt2.toEra + " : " + dt2.fromEra(dt2.toEra))
-    println(dt3.toEra + " : " + dt3.fromEra(dt3.toEra))
-    println(dt3.toEra + " : " + dt.fromEra(dt3.toEra))
-    println(dt.toEra + " : " + dt3.fromEra(dt.toEra))
-    val edt3 = dt3.fromEra(dt.toEra)
-    println(edt3.toEra + " : " + dt.fromEra(edt3.toEra))
-    println("Earth: " + dt.toEra + ", Mars: " + dt3.toEra)
-    println(dt4 + " -> " + dt5)
-    println(Date())
-    println(Date(MarsCalendar.cal))
-  }
-}
