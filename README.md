@@ -8,3 +8,5 @@ Mankind is on the brink of colonising other worlds, and of creating artificial h
 A calendar that, in so far as is possible, removes the anomalies is required, and provides a framework for other planets. This library is an attempt to achieve that.
 
 Note : This library is for the calculation of planetary dates give only 2 assumptions. The length of a year and the length of a day (relative to the earth). For this reason real number arithmetic must be used and then when the date is converted into unit's like YY+DOY rounding/truncation to integers done. This is incompatable with Gregorian dates, which are integer based with a rule for 'leap' years. To keep this consistent, in so much as tyhat is possible, two sets of dates are calculated internally - real numbered universal dates and integer based Gregorian dates. These will become slightly misaligned over time, then realign etc. This is unavoidable.
+
+Testing is 'inline'. 'sbt run' will run tests.

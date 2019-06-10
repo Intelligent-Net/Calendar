@@ -1,6 +1,6 @@
 package space.asgardia.calendar
 
-object TestCalendar {
+object Test {
   def main(args: Array[String]): Unit = {
     test(args)
   }
@@ -81,29 +81,54 @@ object TestCalendar {
     assert(cal.shortToLong(4,0) == "0004-00-00")
   }
 
-  def testLeapYears(cal: Calendar) = {
-    val leaps = (0 until 10).map(y => cal.isLeap(y))
+  def testLongToShort(cal: Calendar) = {
+    assert(cal.longToShort(0,12,27) == "0000+363")
+    assert(cal.longToShort(0,12,28) == "0000+364")
+    assert(cal.longToShort(0,12,29) == "0000+365")
+    assert(cal.longToShort(3,12,30) == "0003+366") // 03 is a leap year
+    assert(cal.longToShort(4,0,0) == "0004+000")
   }
 
-  def testGregorianDates(cal: Calendar) = {
-    val gregorianDates = (1 to 12).map(m => cal.gregorianToAsgardian(2017,m,10))
+  def testLeapYears(cal: Calendar) = {
+    val leaps = (0 until 100).map(y => cal.isLeap(y))
+    val expected = Vector(false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, false, true, false)
+
+    assert(leaps.zip(expected).filter(p => p._1 == p._2).length == 100)
   }
 
   def testAsgardianDates(cal: Calendar) = {
-    val asgardianDates = (0 until 13).map(m => cal.shortToLong(0,m * 28))
+    val asgardianDates = (0 to 13).map(m => cal.asgardianToGregorian(0,m * 28))
+    val expected = Vector("2016:12:21", "2017:01:18", "2017:02:15", "2017:03:15", "2017:04:12", "2017:05:10", "2017:06:07", "2017:07:05", "2017:08:02", "2017:08:30", "2017:09:27", "2017:10:25", "2017:11:22", "2017:12:20")
+    assert(asgardianDates.toString == expected.toString)
+  }
+
+  def testGregorianDates(cal: Calendar) = {
+    val gregorianDates = (1 to 12).map(m => cal.gregorianToAsgardian(2017,m,28))
+    val expected = Vector("0000+038", "0000+069", "0000+097", "0000+128", "0000+158", "0000+189", "0000+219", "0000+250", "0000+281", "0000+311", "0000+342", "0001+007")
+    assert(gregorianDates.toString == expected.toString)
+  }
+
+  def testToLongDates(cal: Calendar) = {
+    val longDates = (0 to 13).map(m => cal.shortToLong(0,m * 28))
+    val expected = Vector("0000-00-00", "0000-01-00", "0000-02-00", "0000-03-00", "0000-04-00", "0000-05-00", "0000-06-00", "0000-07-00", "0000-08-00", "0000-09-00", "0000-10-00", "0000-11-00", "0000-12-00", "0000-12-28")
+    assert(longDates == expected)
   }
 
   def test(args: Array[String]): Unit = {
     val cal = EarthCalendar.cal
 
-    testAsgardianToGregorian(cal)
-    testPlanetConversion(cal)
-    testGregorianToAsgardian(cal)
+    testLeapYears(cal)
+    testShortToLong(cal)
+    testLongToShort(cal)
+    testToLongDates(cal)
+    testAsgardianDates(cal)
+    testGregorianDates(cal)
+
+    // Stress tests
     testIncDays(cal)
     testDecDays(cal)
-    testShortToLong(cal)
-    testLeapYears(cal)
-    testGregorianDates(cal)
-    testAsgardianDates(cal)
+    testPlanetConversion(cal)
+    testAsgardianToGregorian(cal)
+    testGregorianToAsgardian(cal)
   }
 }
