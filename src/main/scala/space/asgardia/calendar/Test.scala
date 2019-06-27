@@ -6,14 +6,12 @@ object Test {
   }
 
   def testAsgardianToGregorian(cal: Calendar) = {
-    for (y <- -3000 to 1000) {
+    for (y <- -3000 to 5000) {
       for (yd <- 0 until (if (cal.gregorianIsLeap(y + (if (y < -cal.startOfEra) cal.startOfEra else cal.startOfEra + 1))) cal.daysInYear.ceil.toInt else cal.daysInYear.toInt)) {
         val g = cal.asgardianToGregorian(y, yd)
         val fmt = if (y < 0) f"${y}%05d+${yd}%03d" else f"${y}%04d+${yd}%03d"
         val a = cal.gregorianToAsgardian(g)
 
-        //if (fmt != a.toString)
-        //  println(fmt + " : " + g + " -> " + a + " # " + cal.isLeap(y) + " / " + Date(y, yd))
         assert(fmt == a.toString)
       }
     }
@@ -61,7 +59,7 @@ object Test {
     } while (day.y > -5000)
   }
 
-  def testPlanetConversion(cal: Calendar) = {
+  def testPlanetConversion() = {
     val earth = Date(EarthCalendar.cal)
     val mars = Date(MarsCalendar.cal)
 
@@ -115,20 +113,20 @@ object Test {
   }
 
   def test(args: Array[String]): Unit = {
-    val cal = EarthCalendar.cal
+    val earth = EarthCalendar.cal
 
-    testLeapYears(cal)
-    testShortToLong(cal)
-    testLongToShort(cal)
-    testToLongDates(cal)
-    testAsgardianDates(cal)
-    testGregorianDates(cal)
+    testLeapYears(earth)
+    testShortToLong(earth)
+    testLongToShort(earth)
+    testToLongDates(earth)
+    testAsgardianDates(earth)
+    testGregorianDates(earth)
 
     // Stress tests
-    testIncDays(cal)
-    testDecDays(cal)
-    testPlanetConversion(cal)
-    testAsgardianToGregorian(cal)
-    testGregorianToAsgardian(cal)
+    testIncDays(earth)
+    testDecDays(earth)
+    testPlanetConversion()
+    testAsgardianToGregorian(earth)
+    testGregorianToAsgardian(earth)
   }
 }

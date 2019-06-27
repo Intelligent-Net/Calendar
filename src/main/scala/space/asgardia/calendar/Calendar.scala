@@ -59,8 +59,12 @@ case class Calendar(locale: String = "Earth",
     Date(yr, dy, this)
   }
 
-  def convert(dt: Date) = {
+  def convert(dt: Date): Date = {
     fromEra((dt.cal.epoch(dt) + dayOffset) * earthHoursInDay / hoursInDay)
+  }
+
+  def convert(dt: String): Date = {
+    convert(Date(dt))
   }
 
   def epoch(dt: Date): Double = {
@@ -238,22 +242,25 @@ case class Calendar(locale: String = "Earth",
   }
 
   def gregorianToAsgardian(y: Int, m: Int, d: Int): Date = {
-    assert(m > 0 && m <= 12)
-    assert(d > 0 && d <= gMonthLens.max)
-    val isLeap = gregorianIsLeap(y)
-    val cml = getCumMonthLens(y)
-    val mm = m - 1
-    val lastYear = cml(mm) + d < cml(12) - dayOffset
-    val dd = d - 1 + dayOffset + (if (lastYear) 1 else 0)
-    val yr = (if (lastYear) y - 1 else y) - startOfEra.toInt 
-    val yy = if (y <= 0) yr + 1 else yr // Adjust for no zero in Gregorian
-    val yLen = (if (isLeap) daysInYear.ceil.toInt else daysInYear.toInt) - 1
-    val dayOfYear = cml(mm) + dd
-    val doy = if (!lastYear) dayOfYear % yLen else dayOfYear
+    if ("Earth" != locale) {
+      convert(EarthCalendar.cal.gregorianToAsgardian(y, m, d))
+    }
+    else {
+      assert(m > 0 && m <= 12)
+      assert(d > 0 && d <= gMonthLens.max)
+      val cml = getCumMonthLens(y)
+      val mm = m - 1
+      val lastYear = cml(mm) + d < cml(12) - dayOffset
+      val dd = d - 1 + dayOffset + (if (lastYear) 1 else 0)
+      val yr = (if (lastYear) y - 1 else y) - startOfEra.toInt 
+      val yy = if (y <= 0) yr + 1 else yr // Adjust for no zero in Gregorian
+      val yLen = (if (gregorianIsLeap(y)) daysInYear.ceil.toInt else daysInYear.toInt) - 1
+      val dayOfYear = cml(mm) + dd
+      val doy = if (!lastYear) dayOfYear % yLen else dayOfYear
 
-    Date(yy, doy, this)
+      Date(yy, doy, EarthCalendar.cal)
+    }
   }
-
   def gregorianToAsgardian(dt: String): Date = {
     val flds = dt.split(":")
 
@@ -261,20 +268,25 @@ case class Calendar(locale: String = "Earth",
   }
 
   def asgardianToGregorian(y: Int, yd: Double): String = {
-    assert(yd <= daysInYear.toInt)
-    val yy = (if (yd > dayOffset) y + 1 else y) + startOfEra
-    val bce = if (y < -startOfEra) 0 else 1
-    val isLeap = gregorianIsLeap(y + bce + startOfEra)
-    val yLen = if (isLeap) daysInYear.ceil.toInt else daysInYear.toInt
-    val yyd = (if (yd >= dayOffset) yd else yd + yLen) - dayOffset
-    val mtd = getCumMonthLens(y + bce + startOfEra).takeWhile(_ < yyd)
-    val mm = if (mtd.length == 0) monthsInYear - 1 else mtd.length
-    val dd = yyd - (if (mtd.length == 0) -31 else mtd.max)
+    if ("Earth" != locale) {
+      EarthCalendar.cal.asgardianToGregorian(convert(Date(y, yd, this)))
+    }
+    else {
+      assert(yd <= daysInYear.toInt)
+      val yy = (if (yd > dayOffset) y + 1 else y) + startOfEra
+      val bce = if (y < -startOfEra) 0 else 1
+      val isLeap = gregorianIsLeap(y + bce + startOfEra)
+      val yLen = if (isLeap) daysInYear.ceil.toInt else daysInYear.toInt
+      val yyd = (if (yd >= dayOffset) yd else yd + yLen) - dayOffset
+      val mtd = getCumMonthLens(y + bce + startOfEra).takeWhile(_ < yyd)
+      val mm = if (mtd.length == 0) monthsInYear - 1 else mtd.length
+      val dd = yyd - (if (mtd.length == 0) -31 else mtd.max)
 
-    if (yy <= 0) // Adjust for no zero in Gregorian
-      f"${yy - 1}%05d:$mm%02d:${dd.toInt}%02d"
-    else
-      f"${yy}%04d:$mm%02d:${dd.toInt}%02d"
+      if (yy <= 0) // Adjust for no zero in Gregorian
+        f"${yy - 1}%05d:$mm%02d:${dd.toInt}%02d"
+      else
+        f"${yy}%04d:$mm%02d:${dd.toInt}%02d"
+    }
   }
 
   def asgardianToGregorian(dt: String): String = {
