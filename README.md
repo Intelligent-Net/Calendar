@@ -9,4 +9,17 @@ A calendar that, in so far as is possible, removes the anomalies is required, an
 
 Note : This library is for the calculation of planetary dates give only 2 assumptions. The length of a year and the length of a day (relative to the earth). For this reason real number arithmetic must be used and then when the date is converted into unit's like YY+DOY rounding/truncation to integers done. This is incompatable with Gregorian dates, which are integer based with a rule for 'leap' years. To keep this consistent, in so much as tyhat is possible, two sets of dates are calculated internally - real numbered universal dates and integer based Gregorian dates. These will become slightly misaligned over time, then realign etc. This is unavoidable.
 
+To install install sbt from https://www.scala-sbt.org/release/docs/Setup.html
+
 Testing is 'inline'. 'sbt run' will run tests.
+
+The libray should work with any Java runtime language, providing of course the scala runline is available to Java or similar.
+
+TODO :
+
+1. Remove start of year offset and provide a start of Era, this is more flexible and clearly defines initial conditions
+2. Add in Era start offset, which is some number between -1.0 and 1.0 which is the drift at the start of the Era in days from the 'true' time.
+3. Test negative dates thoughly
+4. Introduce 'aggregation' of units, for example a year is approximately 13 Lunar months on earth, so a year in a lunar calendar will vary in length (but always be 12 or 13 months), but average be the same length as a solar year.
+5. Possible other aggregations for example for quarters/seasons (2 soltices and 2 equinoxes, approximately 3 months apart).
+6. Add to this list...
