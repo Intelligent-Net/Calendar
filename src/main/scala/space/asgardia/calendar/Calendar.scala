@@ -1,7 +1,7 @@
 package space.asgardia.calendar
 
 case class Calendar(locale: String = "Earth",
-                    daysInYear: Double = 365.242199,
+                    daysInYear: Double = 365.24219878,
                     hoursInDay: Double = 24.0,
                     dayOffset: Int = 10,
                     startOfEra: Int = 2016,
