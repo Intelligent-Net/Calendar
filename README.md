@@ -1,4 +1,7 @@
 # Calendar
+
+Very important. This library works as it is BUT Conversion between planets must take account of the time of day on each planet. This work is being completed. Also, a standard second was developed on Earth, so a local day anywhere except Earth will involve a fraction of a second for the day length. 
+
 Universal Calendar
 
 This library is intended to be a reference implementaation of a universal calendar library.

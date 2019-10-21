@@ -8,16 +8,19 @@ case class Calendar(locale: String = "Earth",
                     daysInMonth: Int = 28,
                     daysInWeek: Int = 7
                    ) {
-  val earthDaysInYear = 365.2422199
-  val earthHoursInDay = 24.0
+  val soe = if (dayOffset > 0) startOfEra - 1 else startOfEra
+  val earthHoursInDay = if (locale == "Earth") hoursInDay else EarthCalendar.cal.hoursInDay
   val monthsInYear: Int = (daysInYear / daysInMonth).round.toInt
   private val gMonthLens = List(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
   private val gLeapMonthLens = gMonthLens.map(ml => if (ml == 28) 29 else ml)
   private val gCumMonthLens = gMonthLens.scanLeft(0)((a,b) => a + b)
   private val gCumLeapMonthLens = gLeapMonthLens.scanLeft(0)((a,b) => a + b)
-  private val diff = daysInYear - daysInYear.floor
-  private val leap = 1.0 / diff
-  private val halfLeap = leap / 2
+  //private val diff = daysInYear - daysInYear.floor
+  //private val leap = 1.0 / diff
+  //private val halfLeap = leap / 2
+  val leapFrac = daysInYear - daysInYear.floor
+  val hlRecip = (1.0 / leapFrac) / 2.0
+
   // Probably good enough for 5000 years
   private val cumYearLens = (0 to 5000).scanLeft(0)((cy,y) => cy + (if (isLeap(y)) daysInYear.ceil.toInt else daysInYear.floor.toInt))
   private val baseCumMonthLens = (0 until (daysInYear / daysInMonth).ceil.toInt).scanLeft(0)((cm,m) => cm + daysInMonth)
@@ -38,7 +41,7 @@ case class Calendar(locale: String = "Earth",
   private val libEpoch = {
     val cal = java.util.Calendar.getInstance(tz)
 
-    cal.set(startOfEra, 11, 31)
+    cal.set(soe, 11, 31)
 
     cal.getTime().getTime() / 1000 / 60 / 60 / 24
   }
@@ -87,8 +90,12 @@ case class Calendar(locale: String = "Earth",
   def gregorianIsLeap(y: Int): Boolean =
     y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)
 
-  def isLeap(y: Int): Boolean =
-    (diff * (y + halfLeap - 1)).toInt < (diff * (y + halfLeap)).toInt 
+  def isLeap(yy: Int): Boolean = {
+    //(diff * (y + halfLeap - 1)).toInt < (diff * (y + halfLeap)).toInt 
+    val y = yy - (if (yy <= 0) 2 else 1) // Adjust to match initial Gregorian
+
+    (leapFrac * (y - 1 + hlRecip)).floor < (leapFrac * (y + hlRecip)).floor
+  }
 
   def getMonthLens(y: Int): List[Int] =
     if (gregorianIsLeap(y)) gLeapMonthLens else gMonthLens
@@ -104,7 +111,8 @@ case class Calendar(locale: String = "Earth",
 
   def shortToLong(y: Int, doy: Double): String = {
     assert(doy <= daysInYear.toInt + (if (isLeap(y)) 1 else 0))
-    f"$y%04d-${(if (doy < daysInYear.toInt - 1) doy / daysInMonth else monthsInYear - 1).toInt}%02.0f-${if (doy / daysInMonth < monthsInYear) doy % daysInMonth else daysInMonth + doy % daysInMonth}%02.0f"
+    val yy = if (y < 0) f"$y%05d" else f"$y%04d"
+    f"$yy-${(if (doy < daysInYear.toInt - 1) doy / daysInMonth else monthsInYear - 1).toInt}%02.0f-${if (doy / daysInMonth < monthsInYear) doy % daysInMonth else daysInMonth + doy % daysInMonth}%02.0f"
   }
 
   def shortToLong(dt: String): String = {
@@ -232,7 +240,10 @@ case class Calendar(locale: String = "Earth",
 
     assert(doy <= daysInYear.toInt + (if (isLeap(y)) 1 else 0))
 
-    f"$y%04d+${doy}%03d"
+    if (y < 0) // Adjust precision for negative years
+      f"$y%05d+${doy}%03d"
+    else
+      f"$y%04d+${doy}%03d"
   }
 
   def longToShort(dt: String): String = {
@@ -252,7 +263,7 @@ case class Calendar(locale: String = "Earth",
       val mm = m - 1
       val lastYear = cml(mm) + d < cml(12) - dayOffset
       val dd = d - 1 + dayOffset + (if (lastYear) 1 else 0)
-      val yr = (if (lastYear) y - 1 else y) - startOfEra.toInt 
+      val yr = (if (lastYear) y - 1 else y) - soe.toInt 
       val yy = if (y <= 0) yr + 1 else yr // Adjust for no zero in Gregorian
       val yLen = (if (gregorianIsLeap(y)) daysInYear.ceil.toInt else daysInYear.toInt) - 1
       val dayOfYear = cml(mm) + dd
@@ -273,12 +284,12 @@ case class Calendar(locale: String = "Earth",
     }
     else {
       assert(yd <= daysInYear.toInt)
-      val yy = (if (yd > dayOffset) y + 1 else y) + startOfEra
-      val bce = if (y < -startOfEra) 0 else 1
-      val isLeap = gregorianIsLeap(y + bce + startOfEra)
+      val yy = (if (yd > dayOffset) y + 1 else y) + soe
+      val bce = if (y < -soe) 0 else 1
+      val isLeap = gregorianIsLeap(y + bce + soe)
       val yLen = if (isLeap) daysInYear.ceil.toInt else daysInYear.toInt
       val yyd = (if (yd >= dayOffset) yd else yd + yLen) - dayOffset
-      val mtd = getCumMonthLens(y + bce + startOfEra).takeWhile(_ < yyd)
+      val mtd = getCumMonthLens(y + bce + soe).takeWhile(_ < yyd)
       val mm = if (mtd.length == 0) monthsInYear - 1 else mtd.length
       val dd = yyd - (if (mtd.length == 0) -31 else mtd.max)
 
