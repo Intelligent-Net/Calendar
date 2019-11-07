@@ -1,93 +1,154 @@
 package space.asgardia.calendar
 
-case class Date(y: Int, doy: Double, cal: Calendar = EarthCalendar.cal) {
-  //val era: Double = cal.toEra(y, doy)
+case class Date(y: Int, doy: Double, cal: Calendar = EarthCalendar) {
   def this(dt: String, c: Calendar) =
     this(dt.substring(0, dt.indexOf('+')).toInt, dt.substring(dt.indexOf('+')+1).toInt, c)
   def this(dt: String) =
-    this(dt, EarthCalendar.cal)
+    this(dt, EarthCalendar)
   def this(y:Int, m: Int, d: Int, c: Calendar) =
-    this(y, m * c.daysInMonth + d, c)
+    this(y, m * c.localDaysInMonth + d, c)
   def this(y:Int, m: Int, d: Int) =
-    this(y, m, d, EarthCalendar.cal)
+    this(y, m, d, EarthCalendar)
   def this(dt: Date, c: Calendar) =
     this(dt.y, dt.doy, c)
   def this(dt: Date) =
-    this(dt.y, dt.doy, EarthCalendar.cal)
+    this(dt.y, dt.doy, EarthCalendar)
+  def this(p: (Int, Double), c: Calendar) =
+    this(p._1, p._2, c)
+  def this(p: (Int, Double)) =
+    this(p._1, p._2, EarthCalendar)
   def this(c: Calendar) =
     this(c.now(), c)
+  def this(e: Double, c: Calendar) =
+    this(c.dateFromEra(e), c)
+  def this(e: Double) =
+    this(e, EarthCalendar)
   def this() =
-    this(EarthCalendar.cal)
+    this(EarthCalendar)
 
   override def toString(): String = 
     if (y < 0)
-      f"$y%05d+${doy.toInt}%03d"
+      f"$y%05d+${doy.floor}%03.0f"
     else
-      f"$y%04d+${doy.toInt}%03d"
-      //f"$y%05d+${doy}%03.4f"
+      f"$y%04d+${doy.floor}%03.0f"
 
-  def toLongString(): String = {
-    f"$y%04.0f-${if (doy < cal.daysInYear.toInt - 1) doy / cal.daysInMonth else cal.monthsInYear - 1}%02.0f-${if (doy / cal.daysInMonth < cal.monthsInYear.toInt) doy % cal.daysInMonth else cal.daysInMonth + doy % cal.daysInMonth}%02.0f"
+  def toDate(): String = 
+    toString
+
+  def toDatetimeFraction(): String = 
+    if (y < 0)
+      f"$y%05d+${doy}%03.6f"
+    else
+      f"$y%04d+${doy}%03.6f"
+
+  def toDatetime(): String = 
+    toString + " " + toTime
+
+  def toDatetimeNano(): String = 
+    toString + " " + toTimeNano
+
+  def toTime(): String =
+    cal.toTime(doy)
+
+  def toTimeNano(): String =
+    cal.toTimeNano(doy)
+
+  def toTime(doy: Double): String =
+    cal.toTime(doy)
+
+  def toTimeNano(doy: Double): String =
+    cal.toTimeNano(doy)
+
+  def toLongDatetime(): String = 
+    toLong + " " + toTime
+
+  def toLongDatetimeNano(): String = 
+    toLong + " " + toTimeNano
+
+  def toLong(): String = {
+    (if (y < 0) f"$y%05.0f" else f"$y%04.0f") +
+    (if ((doy < cal.daysInYear.toInt - 1))
+       f"-${(doy / cal.localDaysInMonth).floor}%02.0f-${(doy % cal.localDaysInMonth).floor}%02.0f"
+     else
+       f"-${(doy / cal.localDaysInMonth - 1).floor}%02.0f-${(doy % cal.localDaysInMonth + cal.localDaysInMonth).floor}%02.0f")
   }
 
   def locale(): String = 
     cal.locale
 
   def diff(dt: Date): Double = {
-    val hrs1 = ((cal.startOfEra + y) * cal.daysInYear + doy + cal.dayOffset) * cal.hoursInDay
-    val hrs2 = ((dt.cal.startOfEra + dt.y) * dt.cal.daysInYear + dt.doy + dt.cal.dayOffset) * dt.cal.hoursInDay
+    val hrs1 = ((cal.startOfEra + y) * cal.daysInYear + doy + cal.earthDayOffset) * cal.earthHoursInDay
+    val hrs2 = ((dt.cal.startOfEra + dt.y) * dt.cal.daysInYear + dt.doy + dt.cal.earthDayOffset) * dt.cal.earthHoursInDay
 
-    (hrs1 - hrs2) / cal.hoursInDay // Note: normalised to lhs days
+    (hrs1 - hrs2) / cal.earthHoursInDay // Note: normalised to earth days
   }
 
-  def before(dt: Date): Boolean = {
-    val df = diff(dt)
+  private val precision: Double = 0.00000001
 
-    df < 0
-  }
+  def ==(dt: Date): Boolean =
+    //diff(dt) == 0.0
+    diff(dt) < precision
 
-  def after(dt: Date): Boolean = {
-    val df = diff(dt)
+  def <(dt: Date): Boolean =
+    //diff(dt) < 0.0
+    diff(dt) + precision < 0.0
 
-    df > 0
-  }
+  def >(dt: Date): Boolean =
+    //diff(dt) > 0.0
+    diff(dt) - precision < 0.0
 
-  def epoch(): Double = {
-    cal.epoch(this)
-  }
+  def <=(dt: Date): Boolean =
+    diff(dt) + precision <= 0.0
 
-  def toEra(): Double = {
-    cal.toEra(this)
-  }
+  def >=(dt: Date): Boolean =
+    diff(dt) - precision >= 0.0
 
-  def fromEra(e: Double): Date = {
-    cal.fromEra(e)
-  }
+  def era(): Double =
+    cal.era(this)
 
-  def convert(dt: Date) = {
-    cal.convert(dt)
-  }
+  def era(c: Calendar): Double =
+    c.era(this)
+
+  def conv() =
+    cal.conv(this)
+
+  def conv(cal: Calendar) =
+    cal.conv(this)
+
+  def conv(dt: Date) =
+    cal.conv(dt)
+
+  def isLeap() =
+    cal.isLeap(y)
+
+  def asgardianToGregorian(): String =
+    cal.asgardianToGregorian(this)
 }
 
 object Date {
   def apply(dt: String, c: Calendar) =
     new Date(dt, c)
   def apply(dt: String) =
-    new Date(dt, EarthCalendar.cal)
+    new Date(dt, EarthCalendar)
   def apply(y:Int, m: Int, d: Int, c: Calendar) =
-    new Date(y, m * c.daysInMonth + d, c)
+    new Date(y, m * c.localDaysInMonth + d, c)
   def apply(y:Int, m: Int, d: Int) =
-    new Date(y, m * EarthCalendar.cal.daysInMonth + d, EarthCalendar.cal)
+    new Date(y, m * EarthCalendar.localDaysInMonth + d, EarthCalendar)
   def apply() =
     new Date()
   def apply(c: Calendar) =
     new Date(c)
   def apply(dt: Date, c: Calendar) =
     new Date(dt.y, dt.doy, c)
+  def apply(e: Double, c: Calendar) =
+    new Date(e, c)
+  def apply(e: Double) =
+    new Date(e)
   def apply(dt: Date) =
     dt
+
   def now(): Date =
-    EarthCalendar.cal.now()
+    EarthCalendar.now()
   def now(c: Calendar): Date =
     c.now()
 }

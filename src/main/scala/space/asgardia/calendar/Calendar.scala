@@ -1,100 +1,108 @@
 package space.asgardia.calendar
 
 case class Calendar(locale: String = "Earth",
-                    daysInYear: Double = 365.24219878,
-                    hoursInDay: Double = 24.0,
-                    dayOffset: Int = 10,
-                    startOfEra: Int = 2016,
-                    daysInMonth: Int = 28,
-                    daysInWeek: Int = 7
+                    daysInYear: Double = 365.24219878, // Local days in year
+                    hoursInDay: Double = 24.0, // Earth hours in local day
+                    daysOffset: Int = 11, // Local days of start of equinox before Gregorian start of year?
+                    startOfEra: Int = 2016, // Gregorian start of Asgardian Era
+                    localDaysInMonth: Int = 28,
+                    localDaysInoweek: Int = 7,
+                    localHoursInDay: Double = 24,
+                    localMinutesInHour: Int = 60,
+                    localSecondsInMinute: Int = 60,
+                    yearZeroIsLeap: Boolean = true,
+                    yearRange: Int = 100000
                    ) {
-  val soe = if (dayOffset > 0) startOfEra - 1 else startOfEra
-  val earthHoursInDay = if (locale == "Earth") hoursInDay else EarthCalendar.cal.hoursInDay
-  val monthsInYear: Int = (daysInYear / daysInMonth).round.toInt
+  val earthHoursInDay = if (locale == "Earth") hoursInDay else EarthCalendar.hoursInDay
+  val earthDaylength = hoursInDay / earthHoursInDay
+  val earthDayOffset = if (locale == "Earth") daysOffset else hoursInDay / EarthCalendar.hoursInDay * daysOffset
+  val earthDaysInYear = daysInYear * hoursInDay / earthHoursInDay
+  val earthStartOfEra = if (locale == "Earth") daysOffset else (EarthCalendar.startOfEra - startOfEra) * earthDaysInYear + earthDayOffset
+  val secondsInDay = localHoursInDay * localMinutesInHour * localSecondsInMinute
+  val monthsInYear: Int = (daysInYear / localDaysInMonth).round.toInt
   private val gMonthLens = List(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
   private val gLeapMonthLens = gMonthLens.map(ml => if (ml == 28) 29 else ml)
   private val gCumMonthLens = gMonthLens.scanLeft(0)((a,b) => a + b)
   private val gCumLeapMonthLens = gLeapMonthLens.scanLeft(0)((a,b) => a + b)
-  //private val diff = daysInYear - daysInYear.floor
-  //private val leap = 1.0 / diff
-  //private val halfLeap = leap / 2
-  val leapFrac = daysInYear - daysInYear.floor
-  val hlRecip = (1.0 / leapFrac) / 2.0
+  private val leapFrac = daysInYear - daysInYear.floor
+  private val hlRecip = (1.0 / leapFrac) / 2.0
 
-  // Probably good enough for 5000 years
-  private val cumYearLens = (0 to 5000).scanLeft(0)((cy,y) => cy + (if (isLeap(y)) daysInYear.ceil.toInt else daysInYear.floor.toInt))
-  private val baseCumMonthLens = (0 until (daysInYear / daysInMonth).ceil.toInt).scanLeft(0)((cm,m) => cm + daysInMonth)
-  private val cumMonthLens = baseCumMonthLens.map(m => if (m == baseCumMonthLens.max) daysInYear.floor.toInt else m).filter(m => m < daysInYear.ceil.toInt)
-  private val cumLeapMonthLens = gCumMonthLens.map(m => if (m == gCumMonthLens.max) daysInYear.ceil.toInt else m)
+  val cumLocalYearLens = (0 to yearRange).scanLeft(0)((cy,y) => cy + (if (isLeap(y)) daysInYear.ceil.toInt else daysInYear.floor.toInt))
 
-  def yearFromEra(e: Double) = {
-    ((e / daysInYear.ceil).toInt to (e / daysInYear.floor).toInt).filter(m => cumYearLens(m) <= e).max
-  }
+  def yearDayLen(y: Int) =
+    if (isLeap(y)) daysInYear.ceil.toInt else daysInYear.toInt
 
-  def doyFromEra(e: Double, y: Int = -2000000000) = {
-    val yr = if (y == -2000000000) yearFromEra(e) else y
+  def dateFromEra(era: Double): (Int, Double) = {
+    val ee = era //- earthDayOffset // earthDayOffset / earthDaylength
+    val e = ee.abs
+    val y = ((e / earthDaysInYear.ceil).toInt to (e / earthDaysInYear.floor).toInt).filter(yr => cumLocalYearLens(yr) <= e).max
+    val doy = ee / earthDaylength + (if (ee >= 0.0) - cumLocalYearLens(y) else cumLocalYearLens(y))
 
-    e - cumYearLens(yr)
+    if (ee < 0)
+      (- y - 1, yearDayLen(- y) + doy)
+    else
+      (y, doy)
   }
 
   private val tz = java.util.TimeZone.getTimeZone("UTC")
-  private val libEpoch = {
-    val cal = java.util.Calendar.getInstance(tz)
 
-    cal.set(soe, 11, 31)
+  def era(dt: Date): Double =
+    dt.cal.era(dt.y, dt.doy)
 
-    cal.getTime().getTime() / 1000 / 60 / 60 / 24
+  def era(y: Int, doy: Double): Double = {
+    val e =
+      if (y >= 0) {
+        val offset = cumLocalYearLens(y)
+
+        earthStartOfEra + (offset + doy) * earthDaylength - earthDayOffset
+      }
+      else {
+        val offset = cumLocalYearLens(- y)
+
+        earthStartOfEra - (offset - doy) * earthDaylength - earthDayOffset
+      }
+
+    // Rounding nasty but necessary
+    round(e, 10000000000.0)
   }
 
+  def round(n: Double, mul: Double) =
+    math.round(n * mul) / mul
 
-  def toEra(dt: Date) = {
-    cumYearLens(dt.y) + dt.doy
-  }
+  def conv(dt: Date): Date = 
+    Date(dt.era, this)
 
-  def toEra(y: Int, doy: Double) = {
-    cumYearLens(y) + doy
-  }
+  def conv(y: Int, doy: Double): Date =
+    Date(y, doy, this)
 
-  def fromEra(era: Double): Date = {
-    val yr = yearFromEra(era)
-    val dy = doyFromEra(era, yr)
-
-    Date(yr, dy, this)
-  }
-
-  def convert(dt: Date): Date = {
-    fromEra((dt.cal.epoch(dt) + dayOffset) * earthHoursInDay / hoursInDay)
-  }
-
-  def convert(dt: String): Date = {
-    convert(Date(dt))
-  }
-
-  def epoch(dt: Date): Double = {
-    (cumYearLens(dt.y) + dt.doy) * hoursInDay / earthHoursInDay - dayOffset
-  }
-
-  def fromEpoch(epoch: Double) = {
-    val era = ((epoch - libEpoch) + dayOffset) * earthHoursInDay / hoursInDay
-
-    fromEra(era)
-  }
+  def conv(e: Double): Date =
+    Date(e, this)
 
   def now(): Date = {
-    val cal = java.util.Calendar.getInstance(tz)
-    val epoch = cal.getTime().getTime() / 1000 / 60 / 60 / 24
+    def nowInDays() = {
+      val cal = java.util.Calendar.getInstance(tz)
 
-    fromEpoch(epoch)
+      cal.getTime().getTime() / 1000.0 / 60.0 / 60.0 / 24.0
+    }
+
+    val d2y = EarthCalendar.cumLocalYearLens(EarthCalendar.startOfEra) - EarthCalendar.cumLocalYearLens(1970)
+    val start = nowInDays - d2y + EarthCalendar.daysOffset * 2.0 + 1.0
+
+    Date(start, this)
   }
 
   def gregorianIsLeap(y: Int): Boolean =
     y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)
 
-  def isLeap(yy: Int): Boolean = {
-    //(diff * (y + halfLeap - 1)).toInt < (diff * (y + halfLeap)).toInt 
-    val y = yy - (if (yy <= 0) 2 else 1) // Adjust to match initial Gregorian
+  def isLeap(y: Int): Boolean = {
+    if (y != 0) {
+      // Leap years should be symmetric about the start of Era
+      val yy = (if (y < 0) -y else y) - 1
 
-    (leapFrac * (y - 1 + hlRecip)).floor < (leapFrac * (y + hlRecip)).floor
+      (leapFrac * (yy - 1 + hlRecip)).floor < (leapFrac * (yy + hlRecip)).floor
+    }
+    else // Year zero of Era may or may not be a Leap year
+      yearZeroIsLeap
   }
 
   def getMonthLens(y: Int): List[Int] =
@@ -106,13 +114,13 @@ case class Calendar(locale: String = "Earth",
   def dateToLong(dt: Date): String = {
     assert(dt.doy <= daysInYear.toInt + (if (isLeap(dt.y)) 1 else 0))
 
-    dt.toString
+    shortToLong(dt.y, dt.doy)
   }
 
   def shortToLong(y: Int, doy: Double): String = {
     assert(doy <= daysInYear.toInt + (if (isLeap(y)) 1 else 0))
     val yy = if (y < 0) f"$y%05d" else f"$y%04d"
-    f"$yy-${(if (doy < daysInYear.toInt - 1) doy / daysInMonth else monthsInYear - 1).toInt}%02.0f-${if (doy / daysInMonth < monthsInYear) doy % daysInMonth else daysInMonth + doy % daysInMonth}%02.0f"
+    f"$yy-${(if (doy < daysInYear.toInt - 1) doy / localDaysInMonth else monthsInYear - 1).toInt}%02.0f-${if (doy / localDaysInMonth < monthsInYear) doy % localDaysInMonth else localDaysInMonth + doy % localDaysInMonth}%02.0f"
   }
 
   def shortToLong(dt: String): String = {
@@ -228,7 +236,7 @@ case class Calendar(locale: String = "Earth",
   }
 
   def longToDate(y: Int, m: Int, d: Int): Date = {
-    val doy = m * daysInMonth + d
+    val doy = m * localDaysInMonth + d
 
     assert(doy <= daysInYear.toInt + (if (isLeap(y)) 1 else 0))
 
@@ -236,7 +244,7 @@ case class Calendar(locale: String = "Earth",
   }
 
   def longToShort(y: Int, m: Int, d: Int): String = {
-    val doy = m * daysInMonth + d
+    val doy = m * localDaysInMonth + d
 
     assert(doy <= daysInYear.toInt + (if (isLeap(y)) 1 else 0))
 
@@ -254,41 +262,49 @@ case class Calendar(locale: String = "Earth",
 
   def gregorianToAsgardian(y: Int, m: Int, d: Int): Date = {
     if ("Earth" != locale) {
-      convert(EarthCalendar.cal.gregorianToAsgardian(y, m, d))
+      val dt = EarthCalendar.gregorianToAsgardian(y, m, d)
+
+      Date(dt.era, this)
     }
     else {
-      assert(m > 0 && m <= 12)
-      assert(d > 0 && d <= gMonthLens.max)
-      val cml = getCumMonthLens(y)
-      val mm = m - 1
-      val lastYear = cml(mm) + d < cml(12) - dayOffset
-      val dd = d - 1 + dayOffset + (if (lastYear) 1 else 0)
-      val yr = (if (lastYear) y - 1 else y) - soe.toInt 
-      val yy = if (y <= 0) yr + 1 else yr // Adjust for no zero in Gregorian
-      val yLen = (if (gregorianIsLeap(y)) daysInYear.ceil.toInt else daysInYear.toInt) - 1
-      val dayOfYear = cml(mm) + dd
-      val doy = if (!lastYear) dayOfYear % yLen else dayOfYear
+      assert(y != 0)  // NOTE : Is this right? Must be historically!
+      assert(m >= 1 && m <= 12)
+      assert(d >= 1 && d <= gMonthLens.max)
 
-      Date(yy, doy, EarthCalendar.cal)
+      val yy = if (y < 0) y + 1 else y
+      val cm = getCumMonthLens(yy)(m - 1) //- daysOffset
+      //val dy = cm + d + daysOffset - 1
+      val dy = cm + d + daysOffset - 1
+      // NOTE: It is not clear when the leap year was at the start of era???
+      val yl = (if (gregorianIsLeap(yy)) daysInYear.ceil.toInt else daysInYear.toInt) - 1
+      
+      if (dy > yl)
+        Date(yy - startOfEra + 1, dy % yl - 1)
+      else
+        Date(yy - startOfEra, dy)
     }
   }
+
   def gregorianToAsgardian(dt: String): Date = {
     val flds = dt.split(":")
 
     gregorianToAsgardian(flds(0).toInt, flds(1).toInt, flds(2).toInt)
   }
 
-  def asgardianToGregorian(y: Int, yd: Double): String = {
+  def asgardianToGregorian(y: Int, doy: Double): String = {
     if ("Earth" != locale) {
-      EarthCalendar.cal.asgardianToGregorian(convert(Date(y, yd, this)))
+      EarthCalendar.asgardianToGregorian(EarthCalendar.conv(era(y, doy)))
     }
     else {
-      assert(yd <= daysInYear.toInt)
-      val yy = (if (yd > dayOffset) y + 1 else y) + soe
+      assert(doy <= daysInYear.toInt)
+
+      val yd = doy + 1
+      val soe = startOfEra - 1
+      val yy = (if (yd > earthDayOffset) y + 1 else y) + soe
       val bce = if (y < -soe) 0 else 1
       val isLeap = gregorianIsLeap(y + bce + soe)
       val yLen = if (isLeap) daysInYear.ceil.toInt else daysInYear.toInt
-      val yyd = (if (yd >= dayOffset) yd else yd + yLen) - dayOffset
+      val yyd = (if (yd >= earthDayOffset) yd else yd + yLen) - earthDayOffset
       val mtd = getCumMonthLens(y + bce + soe).takeWhile(_ < yyd)
       val mm = if (mtd.length == 0) monthsInYear - 1 else mtd.length
       val dd = yyd - (if (mtd.length == 0) -31 else mtd.max)
@@ -307,14 +323,44 @@ case class Calendar(locale: String = "Earth",
   }
 
   def asgardianToGregorian(dt: Date): String = {
-    asgardianToGregorian(dt.y, dt.doy)
+    dt.cal.asgardianToGregorian(dt.y, dt.doy)
+  }
+
+  def asgardianToGregorian(e: Double): String = {
+    asgardianToGregorian(Date(e))
+  }
+
+  def asgardianToGregorianDatetime(y: Int, yd: Double): String = {
+    asgardianToGregorian(y, yd) + " " + toTime(yd)
+  }
+
+  def asgardianToGregorianDatetime(dt: Date): String = {
+    asgardianToGregorian(dt.y, dt.doy) + " " + toTime(dt.doy)
+  }
+
+  def toTime(doy: Double): String = {
+    val t = secondsInDay * (doy - doy.floor)
+    val h = t / localMinutesInHour / localSecondsInMinute
+    val m = h % 1.0 * localMinutesInHour
+    val s = m % 1.0 * localSecondsInMinute + 0.0000000001
+
+    f"${h.floor}%02.0f:${m.floor}%02.0f:${s.floor}%02.0f"
+  }
+
+  def toTimeNano(doy: Double): String = {
+    val t = secondsInDay * (doy - doy.floor)
+    val h = t / localMinutesInHour / localSecondsInMinute
+    val m = h % 1.0 * localMinutesInHour
+    val s = m % 1.0 * localSecondsInMinute + 0.0000000001
+    val r = s % 1.0 * 10000
+
+    f"${h.floor}%02.0f:${m.floor}%02.0f:${s.floor}%02.0f.$r%06.0f"
   }
 }
 
-object EarthCalendar {
-  val cal = Calendar()
-}
-
-object MarsCalendar {
-  val cal = Calendar("Mars", daysInYear = 668.5910, hoursInDay=24.65979, dayOffset=33)
-}
+object EarthCalendar extends Calendar
+// Length of Mars second : 1.027491251701389 
+// Length of Martian solar year : 668.5991
+object MarsCalendar extends Calendar("Mars", daysInYear=668.5991, hoursInDay=24.6597900408, daysOffset=33)
+//object Mars extends Calendar("Mars", daysInYear=668.5991, hoursInDay=24.6597900408, daysOffset=33)
+//object Mars extends Calendar("Mars", daysInYear=1000.0, hoursInDay=12, daysOffset=20)
