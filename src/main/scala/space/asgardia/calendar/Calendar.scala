@@ -63,7 +63,7 @@ case class Calendar(locale: String = "Earth",
       }
 
     // Rounding nasty but necessary
-    round(e, 10000000000.0)
+    round(e, 100000000000.0)
   }
 
   def round(n: Double, mul: Double) =
@@ -86,7 +86,7 @@ case class Calendar(locale: String = "Earth",
     }
 
     val d2y = EarthCalendar.cumLocalYearLens(EarthCalendar.startOfEra) - EarthCalendar.cumLocalYearLens(1970)
-    val start = nowInDays - d2y + EarthCalendar.daysOffset * 2.0 + 1.0
+    val start = nowInDays - d2y + EarthCalendar.daysOffset
 
     Date(start, this)
   }
