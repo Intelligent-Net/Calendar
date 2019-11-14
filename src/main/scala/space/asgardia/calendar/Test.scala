@@ -70,15 +70,16 @@ object Test {
     assert(Date(present,EarthCalendar).era == present)
     assert(Date(Date(present,MarsCalendar).era).era == present)
     assert(EarthCalendar.asgardianToGregorian(Date(present)) == EarthCalendar.asgardianToGregorian(present))
-    assert(rnd(Date().era) == rnd(Date(MarsCalendar).era))
+    assert(rnd(Date().era) == rnd(Date(MarsCalendar).era - MarsCalendar.adjustedEarthDaysSinceEra))
 
-    val c1 = Calendar("c1", daysInYear=10, hoursInDay=24.0, daysOffset=0, startOfEra=2016)
+    val c1 = Calendar("c1", daysInYear=10, hoursInDay=24.0, daysOffset=11, startOfEra=2016)
 
     assert(Date(10.0).era == 10.0)
     assert(Date(Date(10.0).era).era == 10.0)
     assert(Date(Date(10.0).era,MarsCalendar).era == 10.0)
     assert(Date(10.0,MarsCalendar).era == 10.0)
     assert(Date(Date(10.0,MarsCalendar).era).era == 10.0)
+    //println(Date(0,1,c1).era)
     assert(Date(0,1,c1).era == 1.0)
     assert(Date(0,1.5,c1).era == 1.5)
     assert(Date(0,1.5).era == 1.5)
@@ -90,6 +91,19 @@ object Test {
     assert(Date(-1,1).era == -365.0)
     assert(Date(3,299).era == 1395.0)
     assert(Date(3,30.53).era == 1126.53)
+
+    val c2 = Calendar("test1", daysInYear=100, hoursInDay=24, daysOffset= -11, startOfEra=2015)
+
+    assert(c2.conv(EarthCalendar.gregorianToAsgardian(2015,1,1)).toDatetime == "-0003+023 00:00:00")
+    assert(c2.conv(EarthCalendar.gregorianToAsgardian(2016,1,1)).toDatetime == "0000+089 00:00:00")
+    assert(c2.conv(EarthCalendar.gregorianToAsgardian(2016,1,30)).toDatetime == "0001+018 00:00:00")
+    assert(c2.conv(EarthCalendar.gregorianToAsgardian(2017,1,1)).toDatetime == "0004+055 00:00:00")
+
+    assert(Date(EarthCalendar.era(0,0)) == Date(EarthCalendar.era(0,0),MarsCalendar))
+    assert(Date(EarthCalendar.era(0,0)) == Date(MarsCalendar.era(0,0),MarsCalendar))
+    assert(Date(MarsCalendar.era(0,0),MarsCalendar).toDatetime == Date(c2.era(0,0),c2).toDatetime)
+    assert(EarthCalendar.round(MarsCalendar.era(0,0)) == - EarthCalendar.round(MarsCalendar.adjustedEarthDaysSinceEra))
+    assert(EarthCalendar.round(c2.era(0,0)) == - EarthCalendar.round(c2.adjustedEarthDaysSinceEra))
   }
 
   def testPlanetConversion() = {
@@ -178,11 +192,12 @@ object Test {
 
     val present = EarthCalendar.now.era
     val asg = EarthCalendar.asgardianToGregorian(present)
+    val masg = MarsCalendar.asgardianToGregorian(MarsCalendar.now.era)
 
     assert(EarthCalendar.asgardianToGregorian(EarthCalendar.now) == asg)
-    assert(MarsCalendar.asgardianToGregorian(MarsCalendar.now) == asg)
-    assert(EarthCalendar.asgardianToGregorian(MarsCalendar.now) == asg)
     assert(MarsCalendar.asgardianToGregorian(EarthCalendar.now) == asg)
+    assert(MarsCalendar.asgardianToGregorian(MarsCalendar.now.era) == masg)
+    assert(EarthCalendar.asgardianToGregorian(MarsCalendar.now.era) == masg)
 
     assert(EarthCalendar.asgardianToGregorian(3,314.0) == "2019:10:31")
     assert(EarthCalendar.asgardianToGregorian(3,315.0) == "2019:11:01")
@@ -190,6 +205,7 @@ object Test {
     assert(EarthCalendar.asgardianToGregorian(3,317.0) == "2019:11:03")
     assert(EarthCalendar.asgardianToGregorian(3,364.0) == "2019:12:20")
 
+    assert(MarsCalendar.asgardianToGregorian(3,314.0) == "2022:07:01")
     assert(MarsCalendar.asgardianToGregorian(3,314.0) == "2022:07:01")
     assert(MarsCalendar.asgardianToGregorian(3,315.0) == "2022:07:02")
     assert(MarsCalendar.asgardianToGregorian(3,316.0) == "2022:07:03")
@@ -219,10 +235,11 @@ object Test {
     val earthNow = Date()
     val marsNow = Date(MarsCalendar)
 
-    assert(earthNow.toLongDatetime == EarthCalendar.conv(marsNow).toLongDatetime)
-    assert(earthNow.toLongDatetime == marsNow.conv(EarthCalendar).toLongDatetime)
-    assert(marsNow.toLongDatetime == MarsCalendar.conv(earthNow).toLongDatetime)
-    assert(marsNow.toLongDatetime == earthNow.conv(MarsCalendar).toLongDatetime)
+    assert(earthNow.toLongDatetime == EarthCalendar.conv(marsNow.era - MarsCalendar.adjustedEarthDaysSinceEra).toLongDatetime)
+    assert(EarthCalendar.conv(marsNow).toLongDatetime == marsNow.conv(EarthCalendar).toLongDatetime)
+    assert(MarsCalendar.conv(earthNow).toLongDatetime == earthNow.conv(MarsCalendar).toLongDatetime)
+    assert(marsNow.conv(EarthCalendar).toLongDatetime == (marsNow - EarthCalendar.adjustedEarthDaysSinceEra).conv(EarthCalendar).toLongDatetime)
+    assert(marsNow.toLongDatetime == (earthNow + MarsCalendar.adjustedEarthDaysSinceEra).conv(MarsCalendar).toLongDatetime)
   }
 
   def testShortToLong(cal: Calendar) = {
@@ -266,6 +283,9 @@ object Test {
 
   def testGregorianDates(cal: Calendar) = {
     assert(EarthCalendar.era(0,0) == EarthCalendar.gregorianToAsgardian(2015, 12, 21).era)
+    //println(EarthCalendar.era(0,0) + " == " + EarthCalendar.gregorianToAsgardian(2015, 12, 21).era)
+    //println(MarsCalendar.era(0,0) + " == " + MarsCalendar.gregorianToAsgardian(2015, 12, 21).era)
+//System.exit(0)
     assert(MarsCalendar.era(0,0) == MarsCalendar.gregorianToAsgardian(2015, 12, 21).era)
     assert(EarthCalendar.era(0,11) == EarthCalendar.gregorianToAsgardian(2016, 1, 1).era)
     assert(EarthCalendar.era(0,10) == EarthCalendar.gregorianToAsgardian(2015, 12, 31).era)
@@ -353,6 +373,12 @@ object Test {
 
   def test(args: Array[String]): Unit = {
     val earth = EarthCalendar
+
+    val c1 = Calendar("test1", daysInYear=100, hoursInDay=24, daysOffset= -11, startOfEra=2015)
+
+    assert(Date(0,0) == Date(0,0))
+
+    //System.exit(0)
 
     testLeapYears(earth)
     testShortToLong(earth)

@@ -26,6 +26,9 @@ case class Date(y: Int, doy: Double, cal: Calendar = EarthCalendar) {
   def this() =
     this(EarthCalendar)
 
+  def toRawString(): String =
+    s"$y/$doy : $cal"
+
   override def toString(): String = 
     if (y < 0)
       f"$y%05d+${doy.floor}%03.0f"
@@ -77,13 +80,25 @@ case class Date(y: Int, doy: Double, cal: Calendar = EarthCalendar) {
     cal.locale
 
   def diff(dt: Date): Double = {
-    val hrs1 = ((cal.startOfEra + y) * cal.daysInYear + doy + cal.earthDayOffset) * cal.earthHoursInDay
-    val hrs2 = ((dt.cal.startOfEra + dt.y) * dt.cal.daysInYear + dt.doy + dt.cal.earthDayOffset) * dt.cal.earthHoursInDay
+    val hrs1 = ((cal.startOfEra + y) * cal.daysInYear + doy + cal.earthDaysOffset) * cal.earthHoursInDay
+    val hrs2 = ((dt.cal.startOfEra + dt.y) * dt.cal.daysInYear + dt.doy + dt.cal.earthDaysOffset) * dt.cal.earthHoursInDay
 
     (hrs1 - hrs2) / cal.earthHoursInDay // Note: normalised to earth days
   }
 
   private val precision: Double = 0.00000001
+
+  def -(i: Double = 1.0): Date =
+    cal.decDays(this, i)
+
+  def +(i: Double = 1.0): Date =
+    cal.incDays(this, i)
+
+  def --(i: Int): Date =
+    cal.decYears(this, i)
+
+  def ++(i: Int): Date =
+    cal.incYears(this, i)
 
   def ==(dt: Date): Boolean =
     //diff(dt) == 0.0
