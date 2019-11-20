@@ -1,7 +1,5 @@
 # Calendar
 
-Very important. This library works as it is BUT Conversion between planets must take account of the time of day on each planet. This work is being completed. Also, a standard second was developed on Earth, so a local day anywhere except Earth will involve a fraction of a second for the day length. 
-
 Universal Calendar
 
 This library is intended to be a reference implementaation of a universal calendar library.
@@ -20,9 +18,14 @@ The libray should work with any Java runtime language, providing of course the s
 
 TODO :
 
-1. Remove start of year offset and provide a start of Era, this is more flexible and clearly defines initial conditions
-2. Add in Era start offset, which is some number between -1.0 and 1.0 which is the drift at the start of the Era in days from the 'true' time.
-3. Test negative dates thoughly
-4. Introduce 'aggregation' of units, for example a year is approximately 13 Lunar months on earth, so a year in a lunar calendar will vary in length (but always be 12 or 13 months), but average be the same length as a solar year.
-5. Possible other aggregations for example for quarters/seasons (2 soltices and 2 equinoxes, approximately 3 months apart).
-6. Add to this list...
+1. Add in Era start offset, which is some number between -1.0 and 1.0 which is the drift at the start of the Era in days from the 'true' time.
+2. Introduce 'aggregation' of units, for example a year is approximately 13 Lunar months on earth, so a year in a lunar calendar will vary in length (but always be 12 or 13 months), but average be the same length as a solar year.
+3. Possible other aggregations for example for quarters/seasons (2 soltices and 2 equinoxes, approximately 3 months apart).
+4. Add example Calendars, for example sidereal/Galactic Centre/Sagatarius Astar. Need data.
+5. Local time of day support (Sun time). In addition to prime meridean time.
+6. Examples of mixed calendar use, for example tides and solar calendar to predict spring tides. 
+7. Support for named months and days of the week.
+8. Declarative formats.
+9. A web API
+10. A web GUI
+N. Add to this list...
