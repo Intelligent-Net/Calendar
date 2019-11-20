@@ -20,7 +20,6 @@ case class Calendar(locale: String = "Earth",
   val earthDaysSinceEra = if (locale == "Earth") daysOffset else (EarthCalendar.startOfEra - startOfEra) * earthDaysInYear + earthDaysOffset
   val adjustedEarthDaysSinceEra = if (locale == "Earth") 0.0 else earthDaysSinceEra - EarthCalendar.earthDaysOffset
   val localDaysSinceEra = round(earthDaysSinceEra / earthDaylength)
-//println(locale + " # " + earthDaysOffset + " ::: " + earthDaysSinceEra + " / " + localDaysSinceEra)
   val secondsInDay = localHoursInDay * localMinutesInHour * localSecondsInMinute
   val monthsInYear: Int = (daysInYear / localDaysInMonth).round.toInt
   private val gMonthLens = List(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
@@ -204,7 +203,7 @@ case class Calendar(locale: String = "Earth",
     Date(yy, d, this)
   }
 
-  def incYears(dt: Date, i: Int = 1): Date = {
+  def incYears(dt: Date, i: Int): Date = {
     decYears(dt, -i)
   }
 

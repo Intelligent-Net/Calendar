@@ -1,12 +1,79 @@
 package space.asgardia.calendar
 
-object Test {
-  def main(args: Array[String]): Unit = {
-    test(args)
-  }
+import org.scalatest._
 
+class Test extends UnitSpec {
   private def rnd(d: Double) = 
     EarthCalendar.round(d, 100000.0)
+
+  /*
+  "An empty Set " should "have size 0" in {
+    assert(Set.empty.size != 0)
+  }
+
+  it should "produce NoSuchElementException for operations on an empty set" in {
+    assertThrows[NoSuchElementException] {
+      Set.empty.head
+    }
+  }
+  */
+
+  it should "know about leap years" in {
+    testLeapYears(EarthCalendar)
+  }
+
+  it should "be able to convert short date formats to long formats" in {
+    testShortToLong(EarthCalendar)
+  }
+
+  it should "be able to convert long date formats to short formats" in {
+    testLongToShort(EarthCalendar)
+  }
+
+  it should "work with long dates" in {
+    testToLongDates(EarthCalendar)
+  }
+
+  it should "convert Asgardian dates to Gregorian dates" in {
+    testAsgardianDates(EarthCalendar)
+  }
+
+  it should "convert Gregorian dates to Asgardian datas" in {
+    testGregorianDates(EarthCalendar)
+  }
+
+  it should "convert all calendars to Earth relative eras" in {
+    testPlanetEraConversion
+  }
+
+  it should "convert dates in any calendar to dates in any other" in {
+    testPlanetConversion
+  }
+
+  it should "convert datetimes in any calendar to datetimes in any other" in {
+    testPlanetTimeConversion
+  }
+
+  // Stress tests
+  it should "deal with different calendar eras" in {
+    testEras
+  }
+
+  it should "increment days and years correctly" in {
+    testIncDays(EarthCalendar)
+  }
+
+  it should "decrement days and years correctly" in {
+    testDecDays(EarthCalendar)
+  }
+
+  it should "convert Asgardian dates to Gregorian dates for thousands of years" in {
+    testAsgardianToGregorian(EarthCalendar)
+  }
+
+  it should "convert Gregorian dates to Asgardian datas for thousands of years" in {
+    testGregorianToAsgardian(EarthCalendar)
+  }
 
   def testAsgardianToGregorian(cal: Calendar) = {
     // NOTE: does not work properly before start of Gregorian Era
@@ -369,32 +436,5 @@ object Test {
       assert(rnd(Date(me, MarsCalendar).era + err) == rnd(me))
       assert(rnd(Date(Date(me, MarsCalendar).era, EarthCalendar).era + err) == rnd(me))
     }
-  }
-
-  def test(args: Array[String]): Unit = {
-    val earth = EarthCalendar
-
-    val c1 = Calendar("test1", daysInYear=100, hoursInDay=24, daysOffset= -11, startOfEra=2015)
-
-    assert(Date(0,0) == Date(0,0))
-
-    //System.exit(0)
-
-    testLeapYears(earth)
-    testShortToLong(earth)
-    testLongToShort(earth)
-    testToLongDates(earth)
-    testAsgardianDates(earth)
-    testGregorianDates(earth)
-    testPlanetEraConversion
-    testPlanetConversion
-    testPlanetTimeConversion
-
-    // Stress tests
-    testEras
-    testIncDays(earth)
-    testDecDays(earth)
-    testAsgardianToGregorian(earth)
-    testGregorianToAsgardian(earth)
   }
 }
